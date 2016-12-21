@@ -23,3 +23,49 @@ grant the following special exception:
         the compilation and distribution of the Keepalived software with
         the OpenSSL Toolkit.
 
+Make a little change to tool keepalived, based on v1.2.2 fullnat version. in order to deal with clear_diff_services() fails.
+check_daemon.c
+
+
+```
+        /* Processing differential configuration parsing */
+        if (reload) {
+                int try_times = 1;
+                while (try_times < 10) {
+                        if (clear_diff_services() == 1)
+                                break;
+                        log_message(LOG_ERR, "clear diff services error, have tried %d times !", try_times);
+                        try_times ++;
+                }
+                if (try_times == 10)
+                        stop_check(0);
+        }
+```
+
+ipwrapper.c
+
+```
+/* IPVS cleaner processing, choose check_data or old_check_data */
+int
+clear_services(int iscd)
+{
+        element e;
+        list l;
+        if (iscd == 1) {
+                l = check_data->vs;
+        }
+        else {
+                l = old_check_data->vs;
+        }
+        virtual_server *vs;
+        real_server *rs;
+
+        for (e = LIST_HEAD(l); e; ELEMENT_NEXT(e)) {
+                vs = ELEMENT_DATA(e);
+                rs = ELEMENT_DATA(LIST_HEAD(vs->rs));
+                if (!clear_service_vs(check_data->vs_group, vs))
+                        return 0;
+        }
+        return 1;
+}
+```
